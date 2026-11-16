@@ -4,15 +4,35 @@
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const rp = n => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
 
+let csrfToken = null;
+async function ensureCsrf(force = false) {
+  if (!force && csrfToken) return csrfToken;
+  const res = await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  const data = await res.json().catch(() => ({}));
+  csrfToken = data.csrfToken || null;
+  return csrfToken;
+}
+
 async function api(url, opts = {}) {
   opts.credentials = 'same-origin';
+  const method = (opts.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    const token = await ensureCsrf();
+    opts.headers = { ...(opts.headers || {}), 'x-csrf-token': token || '' };
+  }
   if (opts.body instanceof FormData) {
     // Biarkan peramban menyetel Content-Type multipart sendiri
   } else if (opts.body && typeof opts.body !== 'string') {
     opts.body = JSON.stringify(opts.body);
     opts.headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   }
-  const res = await fetch(url, opts);
+  let res = await fetch(url, opts);
+  if (res.status === 403 && !opts._csrfRetried && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    await ensureCsrf(true);
+    opts.headers = { ...(opts.headers || {}), 'x-csrf-token': csrfToken || '' };
+    opts._csrfRetried = true;
+    res = await fetch(url, opts);
+  }
   let data = null;
   try { data = await res.json(); } catch { /* bukan JSON */ }
   if (res.status === 401) { location.href = '/masuk'; throw new Error(data?.error || 'Silakan masuk.'); }

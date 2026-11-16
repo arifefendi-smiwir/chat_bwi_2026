@@ -45,7 +45,7 @@ router.post('/users', async (req, res) => {
   if (wa.startsWith('0')) wa = '62' + wa.slice(1);
   if (nama.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter.' });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Email tidak valid.' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password minimal 6 karakter.' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password minimal 8 karakter.' });
   if (!ROLES.includes(role)) return res.status(400).json({ error: 'Peran tidak valid.' });
   if (role === 'seller' && namaToko.length < 2) return res.status(400).json({ error: 'Nama toko wajib untuk seller.' });
   if (role === 'seller' && !/^62\d{7,13}$/.test(wa)) return res.status(400).json({ error: 'Nomor WA seller tidak valid (contoh 081234567890).' });

@@ -8,6 +8,19 @@ fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 
+function validSignature(filePath, mime) {
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(12);
+    fs.readSync(fd, buf, 0, 12, 0);
+    fs.closeSync(fd);
+    if (mime === 'image/jpeg') return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+    if (mime === 'image/png') return buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47;
+    if (mime === 'image/webp') return buf.slice(0, 4).toString('ascii') === 'RIFF' && buf.slice(8, 12).toString('ascii') === 'WEBP';
+  } catch { /* ignore */ }
+  return false;
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => cb(null,
@@ -26,9 +39,15 @@ const upload = multer({
 /** Middleware pemroses satu berkas (kolom "gambar"), dengan pesan galat ramah. */
 function uploadGambar(req, res, next) {
   upload.single('gambar')(req, res, err => {
-    if (!err) return next();
-    if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Ukuran gambar maksimal 5 MB.' });
-    return res.status(400).json({ error: err.message || 'Gagal memproses gambar.' });
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') return res.status(400).json({ error: 'Ukuran gambar maksimal 5 MB.' });
+      return res.status(400).json({ error: err.message || 'Gagal memproses gambar.' });
+    }
+    if (req.file && !validSignature(req.file.path, req.file.mimetype)) {
+      try { fs.unlinkSync(req.file.path); } catch {}
+      return res.status(400).json({ error: 'Konten file gambar tidak valid.' });
+    }
+    next();
   });
 }
 

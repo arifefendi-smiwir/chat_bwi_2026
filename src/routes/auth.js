@@ -1,9 +1,22 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { q, pool, withTx } = require('../db');
+const { q, withTx } = require('../db');
 
 const router = express.Router();
 const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
+
+function regenerateSession(req, user) {
+  return new Promise((resolve, reject) => {
+    const csrfToken = req.session.csrfToken || crypto.randomBytes(32).toString('hex');
+    req.session.regenerate(err => {
+      if (err) return reject(err);
+      req.session.user = user;
+      req.session.csrfToken = csrfToken;
+      req.session.save(e => (e ? reject(e) : resolve()));
+    });
+  });
+}
 
 router.get('/me', async (req, res) => {
   if (!req.session.user) return res.json({ user: null });
@@ -23,7 +36,7 @@ router.post('/register', async (req, res) => {
   const role = req.body.role === 'seller' ? 'seller' : 'pembeli';
   if (nama.length < 2) return res.status(400).json({ error: 'Nama minimal 2 karakter.' });
   if (!isEmail(email)) return res.status(400).json({ error: 'Format email tidak valid.' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password minimal 6 karakter.' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password minimal 8 karakter.' });
 
   // Seller wajib melengkapi profil toko
   let toko = null;
@@ -53,8 +66,9 @@ router.post('/register', async (req, res) => {
     return r.insertId;
   });
 
-  req.session.user = { id: insertId, nama, email, role };
-  res.status(201).json({ user: req.session.user });
+  const user = { id: insertId, nama, email, role };
+  await regenerateSession(req, user);
+  res.status(201).json({ user });
 });
 
 router.post('/login', async (req, res) => {
@@ -65,8 +79,9 @@ router.post('/login', async (req, res) => {
     return res.status(401).json({ error: 'Email atau password salah.' });
   }
   if (!u.aktif) return res.status(403).json({ error: 'Akun Anda dinonaktifkan. Hubungi admin.' });
-  req.session.user = { id: u.id, nama: u.nama, email: u.email, role: u.role };
-  res.json({ user: req.session.user });
+  const user = { id: u.id, nama: u.nama, email: u.email, role: u.role };
+  await regenerateSession(req, user);
+  res.json({ user });
 });
 
 router.post('/logout', (req, res) => {
