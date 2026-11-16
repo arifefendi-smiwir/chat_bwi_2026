@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Masuk – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <div class="auth">
+    <aside class="auth-brand">
+      <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="#fff" opacity=".9"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="#7ee2ff"/></svg>
+      <h2>Elytra</h2>
+      <p>Marketplace snack &amp; makanan ringan UMKM.<br>Buka toko, kelola produk, terima pesanan.</p>
+      <ul class="auth-points">
+        <li>Katalog gratis untuk semua pengunjung</li>
+        <li>Seller: dashboard produk &amp; pesanan</li>
+        <li>Admin: kelola pengguna &amp; kategori</li>
+      </ul>
+    </aside>
+    <section class="auth-card">
+      <h1>Masuk</h1>
+      <p class="muted">Gunakan email dan password akun Anda.</p>
+      <form id="f" novalidate onsubmit="event.preventDefault()">
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="email" required>
+        <label for="password">Password</label>
+        <div class="pwd">
+          <input type="password" id="password" autocomplete="current-password" required>
+          <button type="button" class="eye" aria-label="Tampilkan password" aria-pressed="false">
+            <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <span class="err" id="err"></span>
+        <button type="submit" class="btn" style="width:100%">Masuk</button>
+      </form>
+      <p class="auth-alt">Belum punya akun? <a href="/daftar">Daftar sekarang</a></p>
+    </section>
+  </div>
+</main>
+<footer>Elytra – marketplace snack UMKM.</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+const home = role => ({ admin: '/admin', seller: '/toko' }[role] || '/katalog');
+// Listener dipasang sinkron agar tidak kalah oleh klik cepat pengguna
+document.getElementById('f').addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = document.getElementById('err'); err.textContent = '';
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    const { user: u } = await api('/api/auth/login', {
+      method: 'POST',
+      body: { email: email.value, password: password.value },
+    });
+    location.href = home(u.role);
+  } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
+});
+bootPage({
+  current: '/masuk',
+  init: async user => {
+    if (user) { location.href = home(user.role); return; }
+  }
+});
+</script>
+</body>
+</html>

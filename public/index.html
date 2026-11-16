@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elytra – Katalog Snack UMKM</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <section class="hero">
+    <span class="hero-eyebrow">Marketplace UMKM</span>
+    <h1>Snack &amp; makanan ringan UMKM, dipesan langsung dari tokonya</h1>
+    <p class="sub">Pesan camilan favorit dari toko-toko UMKM — lewat keranjang atau langsung WhatsApp ke penjualnya.</p>
+    <div class="hero-badges" id="hero-badges"></div>
+    <div class="hero-search">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="search" id="q" placeholder="Cari produk… (mis. keripik)" aria-label="Cari produk">
+    </div>
+  </section>
+  <div class="ph">
+    <h2>Katalog produk</h2>
+    <p class="muted" id="count" aria-live="polite"></p>
+  </div>
+  <div class="chips" id="chips" role="group" aria-label="Opsi hasil pencarian" hidden></div>
+  <div class="grid" id="grid"></div>
+</main>
+<footer>Elytra – marketplace snack UMKM. Harga dan stok dikelola masing-masing toko.</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const state = { q: '', sort: 'unggulan', role: null };
+let kategori = [];
+
+const OPSI_CARI = ['terkait', 'terbaru', 'terlaris', 'termahal', 'termurah'];
+
+// Listener dipasang sinkron agar selalu aktif sejak awal
+$('#q').addEventListener('input', e => {
+  state.q = e.target.value;
+  state.sort = state.q.trim() ? (OPSI_CARI.includes(state.sort) ? state.sort : 'terkait') : 'unggulan';
+  renderChips(); load();
+});
+$('#chips').addEventListener('click', e => {
+  const opt = e.target.closest('[data-harga-opt]');
+  if (opt) { state.sort = opt.dataset.hargaOpt; renderChips(); load(); return; }
+  const hBtn = e.target.closest('[data-harga]');
+  if (hBtn) {
+    const m = $('#menu-harga');
+    m.hidden = !m.hidden;
+    hBtn.setAttribute('aria-expanded', String(!m.hidden));
+    return;
+  }
+  const b = e.target.closest('[data-s]');
+  if (b) { state.sort = b.dataset.s; renderChips(); load(); }
+});
+// Tutup menu Harga jika klik di luar
+document.addEventListener('click', e => {
+  const m = $('#menu-harga');
+  if (m && !m.hidden && !e.target.closest('.chip-menu')) m.hidden = true;
+});
+$('#grid').addEventListener('click', async e => {
+  if (e.target.id === 'rf') { state.q = ''; state.sort = 'unggulan'; $('#q').value = ''; renderChips(); load(); return; }
+  const b = e.target.closest('[data-add]');
+  if (!b) return;
+  b.disabled = true;
+  try {
+    await api('/api/cart', { method: 'POST', body: { produkId: Number(b.dataset.add), jumlah: 1 } });
+    toast('Ditambahkan ke keranjang.');
+    updateCartBadge();
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+});
+
+bootPage({
+  current: '/katalog',
+  init: async user => {
+    state.role = user?.role || null;
+    await load();
+  }
+});
+
+/* Opsi urutan hanya muncul ketika pengguna sedang mencari */
+function renderChips() {
+  const el = $('#chips');
+  if (!state.q.trim()) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  const c = (s, label) => `<button class="chip" data-s="${s}" aria-pressed="${state.sort === s}">${label}</button>`;
+  const hargaAktif = state.sort === 'termahal' || state.sort === 'termurah';
+  el.innerHTML =
+    c('terkait', 'Terkait') + c('terbaru', 'Terbaru') + c('terlaris', 'Terlaris') +
+    `<span class="chip-menu">
+      <button class="chip" data-harga aria-pressed="${hargaAktif}" aria-haspopup="true" aria-expanded="${hargaAktif}">
+        Harga${hargaAktif ? (state.sort === 'termahal' ? ' · Termahal' : ' · Termurah') : ''} ▾
+      </button>
+      <span class="menu" id="menu-harga" ${hargaAktif ? '' : 'hidden'}>
+        <button class="menu-item" data-harga-opt="termurah" aria-pressed="${state.sort === 'termurah'}">Termurah</button>
+        <button class="menu-item" data-harga-opt="termahal" aria-pressed="${state.sort === 'termahal'}">Termahal</button>
+      </span>
+    </span>`;
+}
+
+async function load() {
+  const qs = new URLSearchParams();
+  if (state.q.trim()) { qs.set('q', state.q.trim()); qs.set('sort', state.sort); }
+  const items = await api('/api/catalog/products?' + qs);
+  $('#count').textContent = `Menampilkan ${items.length} produk` + (state.q.trim() ? ` untuk “${state.q.trim()}”` : '');
+  if (!state.q.trim()) renderHero(items);
+  $('#grid').innerHTML = items.length ? items.map(card).join('') :
+    `<div class="empty" style="grid-column:1/-1"><p>Tidak ada produk yang cocok. Ubah kata kunci atau coba opsi lain.</p>
+     <button class="btn alt" id="rf">Reset pencarian</button></div>`;
+}
+
+/* Ringkasan ringan di hero (dihitung dari katalog tanpa pencarian) */
+function renderHero(items) {
+  const toko = new Set(items.map(p => p.toko)).size;
+  const kat = new Set(items.map(p => p.kategori)).size;
+  $('#hero-badges').innerHTML = [
+    ['📦', `${items.length} produk`], ['🏪', `${toko} toko UMKM`], ['🏷️', `${kat} kategori`],
+  ].map(([ic, t]) => `<span class="hero-badge">${ic} ${t}</span>`).join('');
+}
+
+function card(p) {
+  const lbl = p.stok === 0 ? 'Stok habis' : p.stok <= 5 ? `Sisa ${p.stok}` : `Stok ${p.stok}`;
+  const wa = `https://wa.me/${esc(p.wa)}?text=${encodeURIComponent(`Halo ${p.toko}, saya ingin memesan ${p.nama} (${rp(p.harga)}). Apakah masih tersedia?`)}`;
+  let actions = '';
+  if (state.role === 'pembeli') {
+    actions = p.stok > 0
+      ? `<button class="btn" data-add="${p.id}">+ Keranjang</button>`
+      : `<button class="btn" disabled>Stok habis</button>`;
+  } else if (!state.role) {
+    actions = `<a class="btn alt" href="/masuk">Masuk untuk memesan</a>`;
+  }
+  if (p.stok > 0) {
+    actions += `<a class="btn alt" target="_blank" rel="noopener noreferrer" href="${wa}">Pesan via WhatsApp</a>`;
+  }
+  const terjual = state.sort === 'terlaris' && p.terjual > 0 ? `<span class="cat">· ${p.terjual} terjual</span>` : '';
+  return `<article class="card">
+    <div class="pic"><img data-name="${esc(p.nama)}" src="${esc(p.imageUrl || ph(p))}" alt="${esc(p.nama)}" loading="lazy">
+      ${p.unggulan ? '<span class="star">★ Unggulan</span>' : ''}</div>
+    <div class="body">
+      <span class="cat">${esc(p.kategori)} · ${esc(p.toko)}${terjual}</span>
+      <h3 class="name">${esc(p.nama)}</h3>
+      <p class="desc">${esc(p.deskripsi)}</p>
+      <div class="row"><span class="price">${rp(p.harga)}</span><span class="muted${p.stok <= 5 ? ' low' : ''}">${lbl}</span></div>
+      <div class="actions">${actions}</div>
+    </div></article>`;
+}
+</script>
+</body>
+</html>

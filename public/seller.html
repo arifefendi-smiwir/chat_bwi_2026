@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dashboard Toko – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <div class="dh" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px">
+    <h1 style="font-size:1.6rem;margin:0" id="judul-toko">Dashboard Toko</h1>
+    <button class="btn" id="add">Tambah produk</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="ringkasan">Ringkasan</button>
+    <button role="tab" aria-selected="false" data-tab="produk">Produk</button>
+    <button role="tab" aria-selected="false" data-tab="pesanan">Pesanan Masuk</button>
+    <button role="tab" aria-selected="false" data-tab="toko">Pengaturan Toko</button>
+  </div>
+
+  <section class="tabpage on" data-page="ringkasan">
+    <div class="stats" id="stats"></div>
+    <p class="note">Pendapatan dihitung dari item berstatus selain Batal.</p>
+  </section>
+
+  <section class="tabpage" data-page="produk">
+    <div class="tw"><table>
+      <thead><tr><th>Produk</th><th>Kategori</th><th class="n">Harga</th><th class="n">Stok</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody></table></div>
+  </section>
+
+  <section class="tabpage" data-page="pesanan">
+    <div id="orders"><p class="muted">Memuat…</p></div>
+  </section>
+
+  <section class="tabpage" data-page="toko">
+    <div class="panel" style="max-width:560px">
+      <h3>Pengaturan toko</h3>
+      <label for="s-nama">Nama toko</label><input type="text" id="s-nama">
+      <label for="s-wa">Nomor WhatsApp (awalan 0 otomatis jadi 62)</label><input type="text" id="s-wa" inputmode="tel" placeholder="081234567890">
+      <label for="s-desk">Deskripsi toko</label><textarea id="s-desk" rows="2"></textarea>
+      <span class="err" id="s-err"></span>
+      <div class="fa"><button class="btn" id="s-save">Simpan pengaturan</button></div>
+    </div>
+  </section>
+</main>
+<footer>Elytra – dashboard penjual.</footer>
+</div>
+
+<dialog id="dlg" aria-labelledby="dt">
+<form id="f" novalidate>
+  <h2 id="dt" style="margin-top:0">Tambah produk</h2>
+  <label for="f-nama">Nama</label><input type="text" id="f-nama"><span class="err" data-e="nama"></span>
+  <label for="f-kat">Kategori</label><select id="f-kat"></select>
+  <label for="f-harga">Harga (Rupiah)</label><input type="text" id="f-harga" inputmode="numeric" placeholder="mis. 20.000">
+  <label for="f-stok">Stok</label><input type="text" id="f-stok" inputmode="numeric" placeholder="mis. 24">
+  <label for="f-desk">Deskripsi</label><textarea id="f-desk" rows="2"></textarea>
+  <label for="f-file">Gambar dari perangkat (opsional, JPG/PNG/WebP maks. 5 MB)</label>
+  <div class="up">
+    <img id="prev" alt="Pratinjau gambar" class="hidden">
+    <div>
+      <input type="file" id="f-file" accept="image/png,image/jpeg,image/webp">
+      <button type="button" class="btn alt sm hidden" id="rmimg" style="margin-top:6px">Hapus gambar</button>
+    </div>
+  </div>
+  <label for="f-img">…atau tempel URL gambar</label><input type="text" id="f-img" placeholder="https://…">
+  <label class="chk" style="margin-top:12px"><input type="checkbox" id="f-unggulan"> Produk unggulan</label>
+  <div class="fa"><button type="button" class="btn alt" id="cancel">Batal</button><button type="submit" class="btn">Simpan produk</button></div>
+</form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+let kategori = [];
+
+bootPage({
+  current: '/toko',
+  needRole: 'seller',
+  init: async (user, toko) => {
+    $('#judul-toko').textContent = `Dashboard ${toko.nama_toko}`;
+    kategori = await api('/api/catalog/categories');
+    $('#f-kat').innerHTML = kategori.map(k => `<option value="${k.id}">${esc(k.nama)}</option>`).join('');
+    bindTabs(); bindOrders();
+    await Promise.all([loadStats(), loadProducts(), loadOrders()]);
+    loadStore(toko);
+  }
+}).catch(() => {});
+
+function bindTabs() {
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tabs [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('.tabpage').forEach(p => p.classList.toggle('on', p.dataset.page === b.dataset.tab));
+  }));
+}
+
+// ---------- Ringkasan ----------
+async function loadStats() {
+  const s = await api('/api/seller/stats');
+  $('#stats').innerHTML = [
+    ['Total produk', s.produk], ['Total stok', s.stok],
+    ['Item baru', s.baru || 0], ['Diproses', s.diproses || 0],
+    ['Dikirim', s.dikirim || 0], ['Selesai', s.selesai || 0],
+    ['Pendapatan', rp(s.pendapatan || 0)],
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span class="muted">${l}</span></div>`).join('');
+}
+
+// ---------- Produk ----------
+async function loadProducts() {
+  const items = await api('/api/seller/products');
+  $('#tbody').innerHTML = items.length ? items.map(p => `
+    <tr><td>${esc(p.nama)}${p.unggulan ? ' <span title="Unggulan">★</span>' : ''}</td>
+    <td class="muted">${esc(p.kategori)}</td><td class="n">${rp(p.harga)}</td><td class="n">${p.stok}</td>
+    <td class="act">
+      <button class="btn alt sm" data-edit="${p.id}">Ubah</button>
+      <button class="btn bad sm" data-del="${p.id}">Hapus</button></td></tr>`).join('') :
+    '<tr><td colspan="5" class="muted">Belum ada produk. Klik “Tambah produk”.</td></tr>';
+}
+
+$('#tbody').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.edit !== undefined) return openForm(Number(b.dataset.edit));
+  if (b.dataset.del !== undefined) {
+    twoStep(b, async () => {
+      try { await api('/api/seller/products/' + b.dataset.del, { method: 'DELETE' }); toast('Produk dihapus.'); await loadProducts(); loadStats(); }
+      catch (ex) { toast(ex.message); }
+    }, 'Yakin hapus?');
+  }
+});
+
+const dlg = $('#dlg'), form = $('#f');
+let fileTerpilih = false; // berkas baru dipilih pengguna
+
+/* Angka Rupiah: terima "20.000", "20,000", atau "20000" -> 20000 */
+const digits = s => String(s).replace(/\D/g, '');
+$('#f-harga').addEventListener('input', e => { e.target.value = e.target.value ? Number(digits(e.target.value)).toLocaleString('id-ID') : ''; });
+$('#f-stok').addEventListener('input', e => { e.target.value = digits(e.target.value); });
+
+function setImg(u) {
+  $('#f-img').value = u || '';
+  $('#prev').src = u || '';
+  $('#prev').classList.toggle('hidden', !u);
+  $('#rmimg').classList.toggle('hidden', !u);
+}
+
+function openForm(id) {
+  form.reset();
+  fileTerpilih = false;
+  $('#f-file').value = '';
+  $('#dt').textContent = id ? 'Ubah produk' : 'Tambah produk';
+  form.dataset.id = id || '';
+  if (id) {
+    api('/api/seller/products').then(items => {
+      const p = items.find(x => x.id === id);
+      if (!p) return;
+      $('#f-nama').value = p.nama; $('#f-kat').value = p.kategori_id;
+      $('#f-harga').value = Number(p.harga).toLocaleString('id-ID'); $('#f-stok').value = p.stok;
+      $('#f-desk').value = p.deskripsi;
+      setImg(p.imageUrl || '');
+      $('#f-unggulan').checked = !!p.unggulan;
+    });
+  } else {
+    setImg('');
+  }
+  dlg.showModal(); $('#f-nama').focus();
+}
+
+$('#add').addEventListener('click', () => openForm(''));
+$('#cancel').addEventListener('click', () => dlg.close());
+
+$('#f-file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { toast('Format harus JPG, PNG, atau WebP.'); e.target.value = ''; return; }
+  if (f.size > 5 * 1024 * 1024) { toast('Ukuran gambar maksimal 5 MB.'); e.target.value = ''; return; }
+  const r = new FileReader();
+  r.onerror = () => toast('File tidak bisa dibaca.');
+  r.onload = () => {
+    $('#prev').src = r.result;
+    $('#prev').classList.remove('hidden');
+    $('#rmimg').classList.remove('hidden');
+    fileTerpilih = true;
+  };
+  r.readAsDataURL(f);
+});
+
+$('#rmimg').addEventListener('click', () => {
+  fileTerpilih = false;
+  $('#f-file').value = '';
+  setImg('');
+});
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const id = form.dataset.id;
+  const berkas = fileTerpilih && $('#f-file').files[0];
+  const harga = digits($('#f-harga').value);
+  const stok = digits($('#f-stok').value);
+  if (!harga) { toast('Harga wajib diisi angka, mis. 20.000.'); $('#f-harga').focus(); return; }
+  if (stok === '') { toast('Stok wajib diisi angka.'); $('#f-stok').focus(); return; }
+  let opts;
+  if (berkas) {
+    const fd = new FormData();
+    fd.append('nama', $('#f-nama').value);
+    fd.append('kategoriId', $('#f-kat').value);
+    fd.append('harga', harga);
+    fd.append('stok', stok);
+    fd.append('deskripsi', $('#f-desk').value);
+    fd.append('unggulan', $('#f-unggulan').checked);
+    fd.append('gambar', berkas);
+    opts = { body: fd };
+  } else {
+    opts = { body: {
+      nama: $('#f-nama').value, kategoriId: Number($('#f-kat').value),
+      harga: Number(harga), stok: Number(stok),
+      deskripsi: $('#f-desk').value, imageUrl: $('#f-img').value,
+      unggulan: $('#f-unggulan').checked,
+    }};
+  }
+  opts.method = id ? 'PUT' : 'POST';
+  const btn = form.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    if (id) await api('/api/seller/products/' + id, opts);
+    else await api('/api/seller/products', opts);
+    dlg.close(); toast(id ? 'Produk diperbarui.' : 'Produk ditambahkan.');
+    await loadProducts(); loadStats();
+  } catch (ex) { toast(ex.message); }
+  btn.disabled = false;
+});
+
+// ---------- Pesanan masuk ----------
+async function loadOrders() {
+  const rows = await api('/api/seller/orders');
+  $('#orders').innerHTML = rows.length ? rows.map(i => `
+    <div class="order-card">
+      <header><strong>${esc(i.nama_produk)}</strong> ${tagStatus(i.status)}
+        <span class="muted">Pesanan #${i.pesananId} · ${esc(i.pembeli)} · ${esc(i.tanggal)}</span></header>
+      <div class="row" style="margin:0">
+        <span class="muted">${i.jumlah} × ${rp(i.harga)} = <b>${rp(i.subtotal)}</b></span>
+        <span>Status:
+          <select class="status" data-item="${i.id}" data-now="${i.status}">
+            ${['baru','diproses','dikirim','selesai','batal'].map(s =>
+              `<option value="${s}" ${s === i.status ? 'selected' : ''}>${LABEL_STATUS[s]}</option>`).join('')}
+          </select>
+        </span>
+      </div>
+    </div>`).join('') : '<div class="panel"><p class="muted">Belum ada pesanan masuk.</p></div>';
+}
+
+function bindOrders() {
+  $('#orders').addEventListener('change', async e => {
+    const sel = e.target.closest('[data-item]');
+    if (!sel) return;
+    try {
+      await api(`/api/seller/orders/${sel.dataset.item}/status`, { method: 'PATCH', body: { status: sel.value } });
+      toast('Status diperbarui.'); loadStats();
+      if (sel.value === 'batal') loadOrders();
+    } catch (ex) { toast(ex.message); sel.value = sel.dataset.now; }
+  });
+}
+
+// ---------- Pengaturan toko ----------
+function loadStore(toko) {
+  $('#s-nama').value = toko.nama_toko; $('#s-wa').value = toko.wa;
+  $('#s-desk').value = toko.deskripsi || '';
+}
+$('#s-save').addEventListener('click', async () => {
+  try {
+    const { user, toko } = await api('/api/auth/me');
+    await api('/api/seller/store', {
+      method: 'PUT',
+      body: { namaToko: $('#s-nama').value, wa: $('#s-wa').value, deskripsi: $('#s-desk').value },
+    });
+    $('#s-err').textContent = '';
+    toast('Pengaturan disimpan.');
+    const [t] = [await api('/api/seller/store')];
+    loadStore(t);
+  } catch (ex) { $('#s-err').textContent = ex.message; }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keranjang – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <h1 style="font-size:1.6rem">Keranjang</h1>
+  <div id="isi"><p class="muted">Memuat…</p></div>
+</main>
+<footer>Elytra – marketplace snack UMKM.</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+bootPage({
+  current: '/keranjang',
+  needRole: 'pembeli',
+  init: load
+}).catch(() => {});
+
+async function load() {
+  const { items, total } = await api('/api/cart');
+  const el = document.getElementById('isi');
+  if (!items.length) {
+    el.innerHTML = `<div class="panel" style="text-align:center">
+      <p>Keranjang masih kosong.</p><a class="btn" href="/katalog">Belanja sekarang</a></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="tw"><table>
+      <thead><tr><th>Produk</th><th>Toko</th><th class="n">Harga</th><th class="n">Jumlah</th><th class="n">Subtotal</th><th></th></tr></thead>
+      <tbody>${items.map(it => `
+        <tr>
+          <td>${esc(it.nama)}</td>
+          <td class="muted">${esc(it.toko)}</td>
+          <td class="n">${rp(it.harga)}</td>
+          <td class="n">
+            <button class="btn alt sm btn-icon" data-dec="${it.produkId}" aria-label="Kurangi">−</button>
+            <span style="display:inline-block;min-width:2ch;text-align:center">${it.jumlah}</span>
+            <button class="btn alt sm btn-icon" data-inc="${it.produkId}" aria-label="Tambah" ${it.jumlah >= it.stok ? 'disabled' : ''}>+</button>
+          </td>
+          <td class="n">${rp(it.harga * it.jumlah)}</td>
+          <td class="act"><button class="btn bad sm" data-del="${it.produkId}">Hapus</button></td>
+        </tr>`).join('')}
+      </tbody></table></div>
+    <p class="row" style="max-width:420px;margin:16px 0;justify-content:flex-end;gap:24px">
+      <span class="muted">Total</span><span class="price" style="font-size:1.5rem">${rp(total)}</span></p>
+    <div class="fa" style="justify-content:flex-start">
+      <button class="btn" id="checkout">Checkout</button></div>`;
+  document.getElementById('checkout').addEventListener('click', checkout);
+  el.addEventListener('click', onAction);
+}
+
+async function onAction(e) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  try {
+    if (b.dataset.del) {
+      twoStep(b, async () => { await api('/api/cart/' + b.dataset.del, { method: 'DELETE' }); await reload(); }, 'Yakin hapus?');
+      return;
+    }
+    const { items } = await api('/api/cart');
+    const it = items.find(x => String(x.produkId) === (b.dataset.inc || b.dataset.dec));
+    if (!it) return;
+    const jml = it.jumlah + (b.dataset.inc ? 1 : -1);
+    if (jml < 1) return;
+    await api('/api/cart/' + it.produkId, { method: 'PATCH', body: { jumlah: jml } });
+    await reload();
+  } catch (ex) { toast(ex.message); }
+}
+
+async function reload() { await load(); updateCartBadge(); }
+
+async function checkout() {
+  const btn = document.getElementById('checkout');
+  btn.disabled = true;
+  try {
+    const { pesananId } = await api('/api/orders', { method: 'POST' });
+    toast(`Pesanan #${pesananId} dibuat!`);
+    setTimeout(() => location.href = '/pesanan', 600);
+  } catch (ex) { toast(ex.message); btn.disabled = false; }
+}
+</script>
+</body>
+</html>

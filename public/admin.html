@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel Admin – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <h1 style="font-size:1.6rem;margin-top:8px">Panel Admin</h1>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="statistik">Statistik</button>
+    <button role="tab" aria-selected="false" data-tab="users">Pengguna</button>
+    <button role="tab" aria-selected="false" data-tab="produk">Produk</button>
+    <button role="tab" aria-selected="false" data-tab="kategori">Kategori</button>
+    <button role="tab" aria-selected="false" data-tab="pesanan">Pesanan</button>
+  </div>
+
+  <section class="tabpage on" data-page="statistik">
+    <div class="stats" id="stats"></div>
+    <p class="note">Omzet dihitung dari item berstatus selain Batal.</p>
+  </section>
+
+  <section class="tabpage" data-page="users">
+    <div class="dh" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <h2 style="margin:0">Pengguna</h2>
+      <button class="btn" id="u-add">Tambah pengguna</button>
+    </div>
+    <div class="tw"><table>
+      <thead><tr><th>Nama</th><th>Email</th><th>Peran</th><th>Toko</th><th>Status</th><th></th></tr></thead>
+      <tbody id="u-tbody"></tbody></table></div>
+  </section>
+
+  <section class="tabpage" data-page="produk">
+    <div class="tw"><table>
+      <thead><tr><th>Produk</th><th>Toko</th><th>Kategori</th><th class="n">Harga</th><th class="n">Stok</th><th></th></tr></thead>
+      <tbody id="p-tbody"></tbody></table></div>
+  </section>
+
+  <section class="tabpage" data-page="kategori">
+    <div class="toolbar" style="max-width:420px">
+      <input type="text" id="k-nama" placeholder="Nama kategori baru">
+      <button class="btn" id="k-add">Tambah</button>
+    </div>
+    <span class="err" id="k-err"></span>
+    <div class="chips" id="k-chips" style="margin-top:12px"></div>
+  </section>
+
+  <section class="tabpage" data-page="pesanan">
+    <div class="tw"><table>
+      <thead><tr><th>#</th><th>Pembeli</th><th>Produk</th><th>Toko</th><th class="n">Jumlah</th><th class="n">Subtotal</th><th>Status</th><th>Tanggal</th></tr></thead>
+      <tbody id="o-tbody"></tbody></table></div>
+  </section>
+</main>
+<footer>Elytra – panel admin.</footer>
+</div>
+
+<dialog id="dlg" aria-labelledby="dt">
+<form id="f" novalidate>
+  <h2 id="dt" style="margin-top:0">Tambah pengguna</h2>
+  <label for="u-nama">Nama</label><input type="text" id="u-nama">
+  <label for="u-email">Email</label><input type="email" id="u-email">
+  <label for="u-pass">Password (min. 6)</label>
+  <div class="pwd">
+    <input type="text" id="u-pass" autocomplete="off">
+    <button type="button" class="eye" aria-label="Sembunyikan password" aria-pressed="false">
+      <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+    </button>
+  </div>
+  <label for="u-role">Peran</label>
+  <select id="u-role"><option value="pembeli">Pembeli</option><option value="seller">Seller</option><option value="admin">Admin</option></select>
+  <div id="u-toko-fields" class="hidden">
+    <label for="u-toko">Nama toko (wajib untuk seller)</label><input type="text" id="u-toko">
+    <label for="u-wa">Nomor WhatsApp toko</label><input type="text" id="u-wa" inputmode="tel" placeholder="081234567890">
+  </div>
+  <span class="err" id="u-err"></span>
+  <div class="fa"><button type="button" class="btn alt" id="u-cancel">Batal</button><button type="submit" class="btn">Simpan</button></div>
+</form>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+bootPage({
+  current: '/admin',
+  needRole: 'admin',
+  init: async () => {
+    bindTabs();
+    await Promise.all([loadStats(), loadUsers(), loadProducts(), loadKategori(), loadOrders()]);
+    bindUsers(); bindKategori();
+  }
+}).catch(() => {});
+
+function bindTabs() {
+  document.querySelectorAll('.tabs [data-tab]').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tabs [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('.tabpage').forEach(p => p.classList.toggle('on', p.dataset.page === b.dataset.tab));
+  }));
+}
+
+// ---------- Statistik ----------
+async function loadStats() {
+  const s = await api('/api/admin/stats');
+  $('#stats').innerHTML = [
+    ['Total pengguna', s.users.total], ['Admin', s.users.admin || 0],
+    ['Seller', s.users.seller || 0], ['Pembeli', s.users.pembeli || 0],
+    ['Total produk', s.produk.n], ['Total stok', s.produk.stok],
+    ['Pesanan', s.pesanan.totalPesanan], ['Omzet', rp(s.pesanan.omzet || 0)],
+  ].map(([l, v]) => `<div class="stat"><b>${v}</b><span class="muted">${l}</span></div>`).join('');
+}
+
+// ---------- Pengguna ----------
+async function loadUsers() {
+  const rows = await api('/api/admin/users');
+  $('#u-tbody').innerHTML = rows.map(u => `
+    <tr><td>${esc(u.nama)}</td><td class="muted">${esc(u.email)}</td>
+    <td>${tagRole(u.role)}</td>
+    <td class="muted">${u.nama_toko ? esc(u.nama_toko) + '<br>' + esc(u.wa) : '–'}</td>
+    <td>${u.aktif ? '<span class="tag selesai">Aktif</span>' : '<span class="tag batal">Nonaktif</span>'}</td>
+    <td class="act">
+      <button class="btn alt sm" data-tog="${u.id}" data-aktif="${u.aktif}">${u.aktif ? 'Nonaktifkan' : 'Aktifkan'}</button>
+      <button class="btn bad sm" data-udel="${u.id}">Hapus</button></td></tr>`).join('');
+}
+
+function bindUsers() {
+  $('#u-tbody').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.tog !== undefined) {
+      toggleUser(b, Number(b.dataset.tog), b.dataset.aktif === '1' ? 0 : 1);
+    } else if (b.dataset.udel !== undefined) {
+      twoStep(b, () => delUser(Number(b.dataset.udel)), 'Yakin hapus?');
+    }
+  });
+
+  $('#u-add').addEventListener('click', () => {
+    $('#f').reset(); $('#u-err').textContent = '';
+    $('#u-toko-fields').classList.add('hidden');
+    $('#dlg').showModal(); $('#u-nama').focus();
+  });
+  $('#u-role').addEventListener('change', e =>
+    $('#u-toko-fields').classList.toggle('hidden', e.target.value !== 'seller'));
+  $('#u-cancel').addEventListener('click', () => $('#dlg').close());
+  $('#f').addEventListener('submit', async e => {
+    e.preventDefault();
+    try {
+      await api('/api/admin/users', {
+        method: 'POST',
+        body: {
+          nama: $('#u-nama').value, email: $('#u-email').value,
+          password: $('#u-pass').value, role: $('#u-role').value,
+          namaToko: $('#u-toko').value, wa: $('#u-wa').value,
+        },
+      });
+      $('#dlg').close(); toast('Pengguna dibuat.');
+      await loadUsers(); loadStats();
+    } catch (ex) { $('#u-err').textContent = ex.message; }
+  });
+}
+
+async function toggleUser(btn, id, aktif) {
+  try {
+    await api('/api/admin/users/' + id, { method: 'PATCH', body: { aktif } });
+    toast(aktif ? 'Pengguna diaktifkan.' : 'Pengguna dinonaktifkan.');
+    await loadUsers();
+  } catch (ex) { toast(ex.message); }
+}
+
+async function delUser(id) {
+  try {
+    await api('/api/admin/users/' + id, { method: 'DELETE' });
+    toast('Pengguna dihapus.'); await loadUsers(); loadStats(); loadProducts();
+  } catch (ex) { toast(ex.message); }
+}
+
+// ---------- Produk ----------
+async function loadProducts() {
+  const rows = await api('/api/admin/products');
+  $('#p-tbody').innerHTML = rows.length ? rows.map(p => `
+    <tr><td>${esc(p.nama)}${p.unggulan ? ' <span title="Unggulan">★</span>' : ''}</td>
+    <td class="muted">${esc(p.toko)}</td><td class="muted">${esc(p.kategori)}</td>
+    <td class="n">${rp(p.harga)}</td><td class="n">${p.stok}</td>
+    <td class="act"><button class="btn bad sm" data-pdel="${p.id}">Hapus</button></td></tr>`).join('') :
+    '<tr><td colspan="6" class="muted">Belum ada produk.</td></tr>';
+}
+$('#p-tbody').addEventListener('click', e => {
+  const b = e.target.closest('[data-pdel]');
+  if (!b) return;
+  twoStep(b, async () => {
+    try { await api('/api/admin/products/' + b.dataset.pdel, { method: 'DELETE' }); toast('Produk dihapus.'); loadProducts(); loadStats(); }
+    catch (ex) { toast(ex.message); }
+  }, 'Yakin hapus?');
+});
+
+// ---------- Kategori ----------
+async function loadKategori() {
+  const rows = await api('/api/admin/categories');
+  $('#k-chips').innerHTML = rows.map(k => `
+    <span class="chip" style="cursor:default">
+      ${esc(k.nama)} (${k.jumlahProduk})
+      <button class="btn alt sm" data-kedit="${k.id}" data-knama="${esc(k.nama)}" style="padding:2px 8px;margin-left:6px">Ubah</button>
+      <button class="btn bad sm" data-kdel="${k.id}" style="padding:2px 8px">Hapus</button>
+    </span>`).join('');
+}
+function bindKategori() {
+  $('#k-add').addEventListener('click', async () => {
+    try {
+      await api('/api/admin/categories', { method: 'POST', body: { nama: $('#k-nama').value } });
+      $('#k-nama').value = ''; $('#k-err').textContent = '';
+      toast('Kategori ditambahkan.'); await loadKategori();
+    } catch (ex) { $('#k-err').textContent = ex.message; }
+  });
+  $('#k-chips').addEventListener('click', e => {
+    const del = e.target.closest('[data-kdel]');
+    const edit = e.target.closest('[data-kedit]');
+    if (del) {
+      twoStep(del, async () => {
+        try { await api('/api/admin/categories/' + del.dataset.kdel, { method: 'DELETE' }); toast('Kategori dihapus.'); await loadKategori(); }
+        catch (ex) { toast(ex.message); }
+      }, 'Yakin hapus?');
+    } else if (edit) {
+      const nama = prompt('Nama kategori baru:', edit.dataset.knama);
+      if (!nama) return;
+      api('/api/admin/categories/' + edit.dataset.kedit, { method: 'PUT', body: { nama } })
+        .then(() => { toast('Kategori diubah.'); loadKategori(); })
+        .catch(ex => toast(ex.message));
+    }
+  });
+}
+
+// ---------- Pesanan ----------
+async function loadOrders() {
+  const rows = await api('/api/admin/orders');
+  $('#o-tbody').innerHTML = rows.map(i => `
+    <tr><td>#${i.pesananId}</td><td>${esc(i.pembeli)}</td><td>${esc(i.nama)}</td>
+    <td class="muted">${esc(i.toko)}</td><td class="n">${i.jumlah}</td><td class="n">${rp(i.subtotal)}</td>
+    <td><select class="status" data-item="${i.id}" data-now="${i.status}">
+      ${['baru','diproses','dikirim','selesai','batal'].map(s =>
+        `<option value="${s}" ${s === i.status ? 'selected' : ''}>${LABEL_STATUS[s]}</option>`).join('')}
+    </select></td>
+    <td class="muted">${esc(i.tanggal)}</td></tr>`).join('') ||
+    '<tr><td colspan="8" class="muted">Belum ada pesanan.</td></tr>';
+}
+$('#o-tbody').addEventListener('change', async e => {
+  const sel = e.target.closest('[data-item]');
+  if (!sel) return;
+  try {
+    await api(`/api/admin/orders/${sel.dataset.item}/status`, { method: 'PATCH', body: { status: sel.value } });
+    toast('Status diperbarui.'); loadStats();
+    if (sel.value === 'batal') loadOrders();
+  } catch (ex) { toast(ex.message); sel.value = sel.dataset.now; }
+});
+</script>
+</body>
+</html>

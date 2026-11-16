@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pesanan Saya – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <h1 style="font-size:1.6rem">Pesanan Saya</h1>
+  <div id="isi"><p class="muted">Memuat…</p></div>
+</main>
+<footer>Elytra – marketplace snack UMKM.</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+bootPage({
+  current: '/pesanan',
+  needRole: 'pembeli',
+  init: load
+}).catch(() => {});
+
+async function load() {
+  const orders = await api('/api/orders');
+  const el = document.getElementById('isi');
+  if (!orders.length) {
+    el.innerHTML = `<div class="panel" style="text-align:center"><p>Belum ada pesanan.</p>
+      <a class="btn" href="/katalog">Mulai belanja</a></div>`;
+    return;
+  }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card">
+      <header>
+        <strong>Pesanan #${o.id}</strong>
+        <span class="muted">${esc(o.tanggal)} · Total <b>${rp(o.total)}</b></span>
+      </header>
+      <div class="tw"><table style="min-width:480px">
+        <thead><tr><th>Produk</th><th>Toko</th><th class="n">Harga</th><th class="n">Jumlah</th><th>Status</th></tr></thead>
+        <tbody>${o.items.map(i => `
+          <tr><td>${esc(i.nama)}</td><td class="muted">${esc(i.toko)}</td>
+          <td class="n">${rp(i.harga)}</td><td class="n">${i.jumlah}</td>
+          <td>${tagStatus(i.status)}</td></tr>`).join('')}
+        </tbody></table></div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>

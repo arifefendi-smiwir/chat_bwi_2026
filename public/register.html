@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daftar – Elytra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="logo" href="/katalog"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="var(--brand)"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="var(--gold)"/></svg>Elytra</a>
+  <nav class="nav" aria-label="Navigasi utama"></nav>
+</header>
+<main>
+  <div class="auth">
+    <aside class="auth-brand">
+      <svg width="56" height="56" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3C8 3 4 10 5 19c1 6 5 10 11 10V3z" fill="#fff" opacity=".9"/><path d="M16 3c8 0 12 7 11 16-1 6-5 10-11 10V3z" fill="#7ee2ff"/></svg>
+      <h2>Bergabung dengan Elytra</h2>
+      <p>Pilih peran sesuai kebutuhan Anda.</p>
+      <ul class="auth-points">
+        <li><b>Pembeli</b> — belanja, keranjang, riwayat pesanan</li>
+        <li><b>Seller</b> — buka toko, kelola produk, terima pesanan</li>
+      </ul>
+    </aside>
+    <section class="auth-card">
+      <h1>Daftar Akun</h1>
+      <p class="muted">Sudah punya akun? <a href="/masuk">Masuk</a></p>
+      <form id="f" novalidate onsubmit="event.preventDefault()">
+        <span class="label">Saya mendaftar sebagai</span>
+        <div class="role-cards" role="radiogroup" aria-label="Pilihan peran">
+          <label class="role-card">
+            <input type="radio" name="role" value="pembeli" checked>
+            <span class="role-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+            </span>
+            <span class="role-name">Pembeli</span>
+            <span class="role-desc">Belanja &amp; memesan produk</span>
+          </label>
+          <label class="role-card">
+            <input type="radio" name="role" value="seller">
+            <span class="role-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-5h16l1 5"/><path d="M4 9v11a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9"/><path d="M9 21v-6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6"/></svg>
+            </span>
+            <span class="role-name">Seller</span>
+            <span class="role-desc">Buka toko &amp; jual produk</span>
+          </label>
+        </div>
+
+        <label for="nama">Nama lengkap</label>
+        <input type="text" id="nama" autocomplete="name" required>
+
+        <div id="toko-fields" class="hidden">
+          <label for="namatoko">Nama toko</label>
+          <input type="text" id="namatoko" placeholder="mis. Dapur Rasa Nusantara">
+          <label for="wa">Nomor WhatsApp toko</label>
+          <input type="text" id="wa" inputmode="tel" placeholder="081234567890" autocomplete="tel">
+          <p class="muted" style="font-size:.85rem;margin:4px 0 0">Pembeli akan menghubungi nomor ini untuk memesan. Awalan 0 otomatis diubah menjadi 62.</p>
+        </div>
+
+        <label for="email">Email</label>
+        <input type="email" id="email" autocomplete="email" required>
+
+        <label for="password">Password (min. 6 karakter)</label>
+        <div class="pwd">
+          <input type="password" id="password" autocomplete="new-password" required>
+          <button type="button" class="eye" aria-label="Tampilkan password" aria-pressed="false">
+            <svg class="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+        <span class="err" id="err"></span>
+        <button type="submit" class="btn" style="width:100%">Buat akun</button>
+      </form>
+    </section>
+  </div>
+</main>
+<footer>Elytra – marketplace snack UMKM.</footer>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/js/common.js"></script>
+<script>
+'use strict';
+// Listener dipasang sinkron agar tidak kalah oleh klik cepat pengguna
+const f = document.getElementById('f');
+f.addEventListener('change', e => {
+  if (e.target.name === 'role') {
+    document.getElementById('toko-fields').classList.toggle('hidden', e.target.value !== 'seller');
+  }
+});
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  const err = document.getElementById('err'); err.textContent = '';
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  const role = f.querySelector('input[name=role]:checked').value;
+  try {
+    const body = {
+      role, nama: nama.value, email: email.value, password: password.value,
+    };
+    if (role === 'seller') { body.namaToko = namatoko.value; body.wa = wa.value; }
+    const { user: u } = await api('/api/auth/register', { method: 'POST', body });
+    location.href = u.role === 'seller' ? '/toko' : '/katalog';
+  } catch (ex) { err.textContent = ex.message; btn.disabled = false; }
+});
+bootPage({
+  current: '/daftar',
+  init: async user => {
+    if (user) { location.href = '/katalog'; return; }
+  }
+});
+</script>
+</body>
+</html>
