@@ -6,7 +6,7 @@ async function requireAuth(req, res, next) {
   try {
     const rows = await q('SELECT aktif FROM users WHERE id = ?', [req.session.user.id]);
     if (!rows.length || !rows[0].aktif) {
-      req.session.destroy(() => {});
+      req.session = null;
       return res.status(401).json({ error: 'Akun dinonaktifkan. Silakan masuk ulang.' });
     }
   } catch (e) { return res.status(500).json({ error: 'Kesalahan server.' }); }

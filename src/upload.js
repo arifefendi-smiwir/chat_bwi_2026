@@ -1,10 +1,16 @@
-/** Penanganan unggahan gambar produk (disimpan di public/uploads). */
+/** Penanganan unggahan gambar produk.
+ * Di Vercel/serverless filesystem bersifat read-only/ephemeral: gunakan /tmp (tidak persisten).
+ * Untuk penyimpanan permanen di production serverless, gunakan object storage (S3/Cloudinary/dll).
+ */
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'uploads');
-fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const isVercel = !!process.env.VERCEL;
+const UPLOAD_DIR = isVercel
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'public', 'uploads');
+try { fs.mkdirSync(UPLOAD_DIR, { recursive: true }); } catch {}
 
 const EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
 

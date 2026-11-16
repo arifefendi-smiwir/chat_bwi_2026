@@ -1,16 +1,19 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const pool = mysql.createPool({
+const isVercel = !!process.env.VERCEL;
+const poolConfig = {
   host: process.env.DB_HOST || '127.0.0.1',
   port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'elytra',
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: isVercel ? 2 : 10,
   namedPlaceholders: false,
-});
+};
+
+const pool = global.__elytraPool || (global.__elytraPool = mysql.createPool(poolConfig));
 
 /** query(sql, params) -> [rows] */
 async function q(sql, params = []) {

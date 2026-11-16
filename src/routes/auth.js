@@ -6,22 +6,15 @@ const { q, withTx } = require('../db');
 const router = express.Router();
 const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
 
-function regenerateSession(req, user) {
-  return new Promise((resolve, reject) => {
-    const csrfToken = req.session.csrfToken || crypto.randomBytes(32).toString('hex');
-    req.session.regenerate(err => {
-      if (err) return reject(err);
-      req.session.user = user;
-      req.session.csrfToken = csrfToken;
-      req.session.save(e => (e ? reject(e) : resolve()));
-    });
-  });
+function establishSession(req, user) {
+  const csrfToken = crypto.randomBytes(32).toString('hex');
+  req.session = { user, csrfToken };
 }
 
 router.get('/me', async (req, res) => {
-  if (!req.session.user) return res.json({ user: null });
+  if (!req.session || !req.session.user) return res.json({ user: null });
   const [u] = await q('SELECT id,nama,email,role,aktif FROM users WHERE id=?', [req.session.user.id]);
-  if (!u || !u.aktif) { req.session.destroy(() => {}); return res.json({ user: null }); }
+  if (!u || !u.aktif) { req.session = null; return res.json({ user: null }); }
   let toko = null;
   if (u.role === 'seller') {
     [toko] = await q('SELECT id,nama_toko,wa FROM toko WHERE user_id=?', [u.id]);
@@ -67,7 +60,7 @@ router.post('/register', async (req, res) => {
   });
 
   const user = { id: insertId, nama, email, role };
-  await regenerateSession(req, user);
+  establishSession(req, user);
   res.status(201).json({ user });
 });
 
@@ -80,12 +73,13 @@ router.post('/login', async (req, res) => {
   }
   if (!u.aktif) return res.status(403).json({ error: 'Akun Anda dinonaktifkan. Hubungi admin.' });
   const user = { id: u.id, nama: u.nama, email: u.email, role: u.role };
-  await regenerateSession(req, user);
+  establishSession(req, user);
   res.json({ user });
 });
 
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => res.json({ ok: true }));
+  req.session = null;
+  res.json({ ok: true });
 });
 
 module.exports = router;
